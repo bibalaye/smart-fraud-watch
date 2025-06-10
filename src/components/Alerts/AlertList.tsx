@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { Eye, Filter, Search, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Eye, Filter, Search, AlertTriangle, CheckCircle, Clock, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Alert {
@@ -15,6 +14,7 @@ interface Alert {
   timestamp: string;
   location: string;
   cardHolder: string;
+  assignedTo?: string;
 }
 
 const mockAlerts: Alert[] = [
@@ -29,7 +29,8 @@ const mockAlerts: Alert[] = [
     merchantName: 'Boutique Électronique Paris',
     timestamp: '2024-06-10 14:23:15',
     location: 'Paris, France',
-    cardHolder: 'Jean Dupont'
+    cardHolder: 'Jean Dupont',
+    assignedTo: 'Jean Martin'
   },
   {
     id: 'ALT-2024-002',
@@ -42,7 +43,8 @@ const mockAlerts: Alert[] = [
     merchantName: 'Restaurant Le Gourmet',
     timestamp: '2024-06-10 14:18:42',
     location: 'Lyon, France',
-    cardHolder: 'Marie Martin'
+    cardHolder: 'Marie Martin',
+    assignedTo: 'Sophie Durand'
   },
   {
     id: 'ALT-2024-003',
@@ -72,24 +74,38 @@ const mockAlerts: Alert[] = [
   }
 ];
 
+type UserRole = 'analyst' | 'manager' | 'admin' | 'auditor';
+
 interface AlertListProps {
   onAlertSelect: (alert: Alert) => void;
+  userRole: UserRole;
 }
 
-export const AlertList = ({ onAlertSelect }: AlertListProps) => {
+export const AlertList = ({ onAlertSelect, userRole }: AlertListProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [riskFilter, setRiskFilter] = useState<string>('all');
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('all');
 
-  const filteredAlerts = mockAlerts.filter(alert => {
+  // Filter alerts based on user role
+  const roleFilteredAlerts = mockAlerts.filter(alert => {
+    if (userRole === 'analyst') {
+      // Analysts only see their assigned alerts
+      return alert.assignedTo === 'Jean Martin'; // This would be dynamic based on current user
+    }
+    return true; // Managers, admins, and auditors see all alerts
+  });
+
+  const filteredAlerts = roleFilteredAlerts.filter(alert => {
     const matchesSearch = alert.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          alert.cardHolder.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          alert.merchantName.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || alert.status === statusFilter;
     const matchesRisk = riskFilter === 'all' || alert.riskLevel === riskFilter;
+    const matchesAssignee = assigneeFilter === 'all' || alert.assignedTo === assigneeFilter;
     
-    return matchesSearch && matchesStatus && matchesRisk;
+    return matchesSearch && matchesStatus && matchesRisk && matchesAssignee;
   });
 
   const getStatusIcon = (status: Alert['status']) => {
@@ -118,11 +134,26 @@ export const AlertList = ({ onAlertSelect }: AlertListProps) => {
     }
   };
 
+  const getPageTitle = () => {
+    switch (userRole) {
+      case 'analyst': return 'Mes Alertes';
+      case 'manager': return 'Alertes de l\'Équipe';
+      case 'admin': return 'Toutes les Alertes';
+      case 'auditor': return 'Consultation des Alertes';
+      default: return 'Gestion des Alertes';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Gestion des Alertes</h1>
-        <p className="text-muted-foreground mt-2">Surveillance et investigation des transactions suspectes</p>
+        <h1 className="text-3xl font-bold text-foreground">{getPageTitle()}</h1>
+        <p className="text-muted-foreground mt-2">
+          {userRole === 'analyst' 
+            ? 'Vos alertes assignées et leur statut'
+            : 'Surveillance et investigation des transactions suspectes'
+          }
+        </p>
       </div>
 
       {/* Filters */}
@@ -162,6 +193,21 @@ export const AlertList = ({ onAlertSelect }: AlertListProps) => {
               <option value="Moyen">Risque moyen</option>
               <option value="Faible">Risque faible</option>
             </select>
+
+            {/* Show assignee filter only for managers and admins */}
+            {(userRole === 'manager' || userRole === 'admin') && (
+              <select
+                value={assigneeFilter}
+                onChange={(e) => setAssigneeFilter(e.target.value)}
+                className="px-4 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="all">Tous les analystes</option>
+                <option value="Jean Martin">Jean Martin</option>
+                <option value="Sophie Durand">Sophie Durand</option>
+                <option value="Lucas Bernard">Lucas Bernard</option>
+                <option value="Marie Petit">Marie Petit</option>
+              </select>
+            )}
           </div>
         </div>
       </div>
@@ -178,6 +224,9 @@ export const AlertList = ({ onAlertSelect }: AlertListProps) => {
                 <th className="text-left p-4 font-medium text-muted-foreground">Marchand</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Risque</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Statut</th>
+                {(userRole === 'manager' || userRole === 'admin') && (
+                  <th className="text-left p-4 font-medium text-muted-foreground">Assigné à</th>
+                )}
                 <th className="text-left p-4 font-medium text-muted-foreground">Date</th>
                 <th className="text-left p-4 font-medium text-muted-foreground">Actions</th>
               </tr>
@@ -222,6 +271,14 @@ export const AlertList = ({ onAlertSelect }: AlertListProps) => {
                       {alert.status}
                     </div>
                   </td>
+                  {(userRole === 'manager' || userRole === 'admin') && (
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <UserCheck className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">{alert.assignedTo || 'Non assignée'}</span>
+                      </div>
+                    </td>
+                  )}
                   <td className="p-4">
                     <span className="text-sm text-muted-foreground">
                       {new Date(alert.timestamp).toLocaleDateString('fr-FR')}
@@ -233,7 +290,7 @@ export const AlertList = ({ onAlertSelect }: AlertListProps) => {
                       className="flex items-center gap-1 px-3 py-1 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
                     >
                       <Eye className="w-4 h-4" />
-                      Détails
+                      {userRole === 'auditor' ? 'Consulter' : 'Détails'}
                     </button>
                   </td>
                 </tr>
@@ -245,7 +302,12 @@ export const AlertList = ({ onAlertSelect }: AlertListProps) => {
         {filteredAlerts.length === 0 && (
           <div className="text-center py-12">
             <Filter className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">Aucune alerte ne correspond aux critères de recherche</p>
+            <p className="text-muted-foreground">
+              {userRole === 'analyst' 
+                ? 'Aucune alerte ne vous est actuellement assignée'
+                : 'Aucune alerte ne correspond aux critères de recherche'
+              }
+            </p>
           </div>
         )}
       </div>

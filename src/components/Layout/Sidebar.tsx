@@ -1,21 +1,58 @@
 
 import { useState } from 'react';
-import { Shield, BarChart3, AlertTriangle, Settings, Menu, X } from 'lucide-react';
+import { Shield, BarChart3, AlertTriangle, Settings, Menu, X, Users, FileText, Briefcase, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+type UserRole = 'analyst' | 'manager' | 'admin' | 'auditor';
 
 interface SidebarProps {
   activeSection: string;
   onSectionChange: (section: string) => void;
+  userRole: UserRole;
+  onRoleChange: (role: UserRole) => void;
 }
 
-const navigation = [
-  { id: 'dashboard', name: 'Dashboard', icon: BarChart3 },
-  { id: 'alerts', name: 'Alertes', icon: AlertTriangle },
-  { id: 'settings', name: 'Administration', icon: Settings },
-];
+const getNavigationForRole = (role: UserRole) => {
+  const baseNavigation = [
+    { id: 'dashboard', name: 'Dashboard', icon: BarChart3 },
+    { id: 'alerts', name: 'Alertes', icon: AlertTriangle },
+  ];
 
-export const Sidebar = ({ activeSection, onSectionChange }: SidebarProps) => {
+  switch (role) {
+    case 'analyst':
+      return baseNavigation;
+    case 'manager':
+      return [
+        ...baseNavigation,
+        { id: 'workload', name: 'Gestion Équipe', icon: Users },
+      ];
+    case 'admin':
+      return [
+        ...baseNavigation,
+        { id: 'users', name: 'Utilisateurs', icon: UserCheck },
+        { id: 'settings', name: 'Administration', icon: Settings },
+      ];
+    case 'auditor':
+      return [
+        ...baseNavigation,
+        { id: 'audit', name: 'Journal d\'Audit', icon: FileText },
+      ];
+    default:
+      return baseNavigation;
+  }
+};
+
+export const Sidebar = ({ activeSection, onSectionChange, userRole, onRoleChange }: SidebarProps) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  
+  const navigation = getNavigationForRole(userRole);
+  
+  const roleLabels = {
+    analyst: 'Analyste Fraude',
+    manager: 'Manager',
+    admin: 'Administrateur',
+    auditor: 'Auditeur'
+  };
 
   const SidebarContent = () => (
     <>
@@ -27,6 +64,22 @@ export const Sidebar = ({ activeSection, onSectionChange }: SidebarProps) => {
           <h1 className="text-xl font-bold text-foreground">FraudGuard</h1>
           <p className="text-sm text-muted-foreground">Détection IA</p>
         </div>
+      </div>
+
+      {/* Role Selector */}
+      <div className="px-6 py-4 border-b border-border">
+        <label className="block text-sm font-medium text-muted-foreground mb-2">
+          Rôle Utilisateur
+        </label>
+        <select
+          value={userRole}
+          onChange={(e) => onRoleChange(e.target.value as UserRole)}
+          className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary focus:border-transparent"
+        >
+          {Object.entries(roleLabels).map(([value, label]) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
+        </select>
       </div>
       
       <nav className="flex-1 px-4 py-6 space-y-2">
