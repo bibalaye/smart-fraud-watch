@@ -87,9 +87,27 @@ const Index = () => {
         onRoleChange={setCurrentUserRole}
       />
       
-      <main className="flex-1 p-4 lg:p-8 lg:ml-0 ml-0">
+      <main className="flex-1 p-4 lg:p-8 overflow-auto">
         <div className="max-w-7xl mx-auto pt-12 lg:pt-0">
-          {renderContent()}
+          <header className="mb-8 pb-4 border-b border-border">
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
+              {activeSection === 'dashboard' ? 'Tableau de Bord' : 
+               activeSection === 'alerts' ? 'Gestion des Alertes' :
+               activeSection === 'workload' ? 'Gestion de l\'Équipe' :
+               activeSection === 'users' ? 'Gestion des Utilisateurs' :
+               activeSection === 'audit' ? 'Journal d\'Audit' :
+               'Paramètres du Système'}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {selectedAlert 
+                ? `Détail de l'alerte #${selectedAlert.id}` 
+                : "Système de détection et de gestion des fraudes bancaires"}
+            </p>
+          </header>
+          
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-border p-6">
+            {renderContent()}
+          </div>
         </div>
       </main>
     </div>
